@@ -1,8 +1,10 @@
 import os
 from langchain_chroma import Chroma
 from langchain_ollama import OllamaEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from src.configs import chroma_db_dir
+from src.configs.env import api_key, base_url, mode
 
 HEADERS_TO_SPLIT_ON = [
     ("#", "Header_1"),
@@ -16,10 +18,19 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 def get_vector_store() -> Chroma:
     """Returns the Chroma vector store instance."""
-    embeddings = OllamaEmbeddings(
-        model="nomic-embed-text",
-        base_url=os.getenv("LLM_BASE_URL", "http://localhost:11434")
-    )
+    if mode.lower() == "ollama":
+        embeddings = OllamaEmbeddings(
+            model="nomic-embed-text",
+            base_url=base_url or "http://localhost:11434",
+        )
+    else:
+        embeddings = OpenAIEmbeddings(
+            model="gemini-embedding-001",
+            api_key=api_key,
+            base_url=base_url,
+            check_embedding_ctx_length=False,
+        )
+
     return Chroma(
         persist_directory=chroma_db_dir,
         embedding_function=embeddings,
